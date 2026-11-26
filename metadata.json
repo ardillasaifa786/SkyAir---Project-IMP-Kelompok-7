@@ -1,0 +1,6 @@
+{
+  "name": "SkyAir | Klasifikasi Kualitas Udara",
+  "description": "Sistem cerdas berbasis Deep Learning dan citra langit untuk mengklasifikasikan kualitas udara serta visualisasi Grad-CAM.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
