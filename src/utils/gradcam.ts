@@ -19,6 +19,8 @@ export async function computeImageMetrics(dataUrl: string): Promise<{
   width: number;
   height: number;
   metrics: ImageMetrics;
+  inferenceBase64: string;
+  inferenceMimeType: string;
 }> {
   const img = await loadImageElement(dataUrl);
   const sampleSize = 112;
@@ -27,10 +29,28 @@ export async function computeImageMetrics(dataUrl: string): Promise<{
   canvas.height = sampleSize;
   const ctx = canvas.getContext("2d");
 
+  // Also prepare a compact JPEG copy (max 1024px) for /api/predict
+  const maxDim = 1024;
+  const scale = Math.min(1, maxDim / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+  const infCanvas = document.createElement("canvas");
+  infCanvas.width = Math.max(1, Math.round((img.naturalWidth || 640) * scale));
+  infCanvas.height = Math.max(1, Math.round((img.naturalHeight || 480) * scale));
+  const infCtx = infCanvas.getContext("2d");
+  let inferenceBase64 = dataUrl.split(",")[1] ?? "";
+  let inferenceMimeType = "image/jpeg";
+  if (infCtx) {
+    infCtx.drawImage(img, 0, 0, infCanvas.width, infCanvas.height);
+    const compressedUrl = infCanvas.toDataURL("image/jpeg", 0.85);
+    inferenceBase64 = compressedUrl.split(",")[1] ?? inferenceBase64;
+    inferenceMimeType = "image/jpeg";
+  }
+
   if (!ctx) {
     return {
       width: img.naturalWidth,
       height: img.naturalHeight,
+      inferenceBase64,
+      inferenceMimeType,
       metrics: {
         meanBlueRatio: 0.5,
         hazeIndex: 0.5,
@@ -69,6 +89,8 @@ export async function computeImageMetrics(dataUrl: string): Promise<{
   return {
     width: img.naturalWidth,
     height: img.naturalHeight,
+    inferenceBase64,
+    inferenceMimeType,
     metrics: {
       meanBlueRatio: Number((blueRatioSum / totalPixels).toFixed(4)),
       hazeIndex: Number((hazeSum / totalPixels).toFixed(4)),
@@ -302,16 +324,16 @@ export async function urlToUploadedSkyImage(
     reader.onerror = () => reject(new Error("Gagal membaca file citra."));
     reader.readAsDataURL(blob);
   });
-  const base64 = dataUrl.split(",")[1] ?? "";
-  const { width, height, metrics } = await computeImageMetrics(dataUrl);
+  const { width, height, metrics, inferenceBase64, inferenceMimeType } =
+    await computeImageMetrics(dataUrl);
   return {
     name: displayName,
     format: mimeType.replace("image/", "").toUpperCase(),
-    mimeType,
+    mimeType: inferenceMimeType,
     width,
     height,
     dataUrl,
-    base64,
+    base64: inferenceBase64,
     metrics,
   };
 }

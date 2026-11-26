@@ -88,17 +88,17 @@ export function PredictionPage() {
         reader.readAsDataURL(file);
       });
 
-      const base64 = dataUrl.split(",")[1] ?? "";
-      const { width, height, metrics } = await computeImageMetrics(dataUrl);
+      const { width, height, metrics, inferenceBase64, inferenceMimeType } =
+        await computeImageMetrics(dataUrl);
 
       setUploadedImage({
         name: file.name,
         format: file.type.replace("image/", "").toUpperCase(),
-        mimeType: file.type,
+        mimeType: inferenceMimeType,
         width,
         height,
         dataUrl,
-        base64,
+        base64: inferenceBase64,
         metrics,
       });
     } catch (err) {
